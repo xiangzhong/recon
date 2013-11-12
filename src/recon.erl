@@ -534,8 +534,7 @@ port_info(PortTerm) ->
     ;          (port_term(), [atom()]) -> [{atom(), term()}]
     ;          (port_term(), atom()) -> {atom(), term()}.
 port_info(PortTerm, meta) ->
-    {meta, List} = port_info_type(PortTerm, meta, [id, name, os_pid,
-                                                   parallelism]),
+    {meta, List} = port_info_type(PortTerm, meta, [id, name, os_pid]),
     case port_info(PortTerm, registered_name) of
         [] -> {meta, List};
         Name -> {meta, [Name | List]}
