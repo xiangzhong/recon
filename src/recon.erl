@@ -84,7 +84,7 @@
 -export([remote_load/1, remote_load/2,
          source/1]).
 -export([tcp/0, udp/0, sctp/0, files/0, port_types/0,
-         inet_count/2, inet_window/3,
+         inet_count/2, inet_count/3, inet_window/3, inet_window/4,
          port_info/1, port_info/2]).
 -export([rpc/1, rpc/2, rpc/3,
          named_rpc/1, named_rpc/2, named_rpc/3]).
@@ -122,7 +122,7 @@
 
 -type port_info_type() :: meta | signals | io | memory_used | specific.
 
--type port_info_meta_key() :: registered_name | id | name | os_pid | parallelism.
+-type port_info_meta_key() :: registered_name | id | name | os_pid.
 -type port_info_signals_key() :: connected | links | monitors.
 -type port_info_io_key() :: input | output.
 -type port_info_memory_key() :: memory | queue_size.
@@ -474,6 +474,16 @@ inet_count(Attr, Num) ->
         recon_lib:inet_attrs(Attr)
     ), Num).
 
+-spec inet_count(AttributeName, Num, [port()]) -> [inet_attrs()] when
+      AttributeName :: 'recv_cnt' | 'recv_oct' | 'send_cnt' | 'send_oct'
+                     | 'cnt' | 'oct',
+      Num :: non_neg_integer().
+inet_count(Attr, Num, Ports) when is_list(Ports) ->
+    lists:sublist(lists:usort(
+        fun({_,A,_},{_,B,_}) -> A > B end,
+        recon_lib:inet_attrs(Attr, Ports)
+    ), Num).
+
 %% @doc Fetches a given attribute from all inet ports (TCP, UDP, SCTP)
 %% and returns the biggest entries, over a sliding time window.
 %%
@@ -493,6 +503,19 @@ inet_count(Attr, Num) ->
       Milliseconds :: pos_integer().
 inet_window(Attr, Num, Time) when is_atom(Attr) ->
     Sample = fun() -> recon_lib:inet_attrs(Attr) end,
+    {First,Last} = recon_lib:sample(Time, Sample),
+    lists:sublist(lists:usort(
+        fun({_,A,_},{_,B,_}) -> A > B end,
+        recon_lib:sliding_window(First, Last)
+    ), Num).
+
+-spec inet_window(AttributeName, Num, Milliseconds, [port()]) -> [inet_attrs()] when
+      AttributeName :: 'recv_cnt' | 'recv_oct' | 'send_cnt' | 'send_oct'
+                     | 'cnt' | 'oct',
+      Num :: non_neg_integer(),
+      Milliseconds :: pos_integer().
+inet_window(Attr, Num, Time, Ports) when is_atom(Attr), is_list(Ports) ->
+    Sample = fun() -> recon_lib:inet_attrs(Attr, Ports) end,
     {First,Last} = recon_lib:sample(Time, Sample),
     lists:sublist(lists:usort(
         fun({_,A,_},{_,B,_}) -> A > B end,

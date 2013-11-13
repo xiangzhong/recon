@@ -97,11 +97,12 @@ inet_attrs(AttrName) ->
 %% @doc Returns the attributes required for a given inet port (UDP,
 %% SCTP, TCP). This form of attributes is standard for most comparison
 %% functions for processes in recon.
--spec inet_attrs(AttributeName, port()) -> {ok,recon:inet_attrs()}
+-spec inet_attrs(AttributeName, Ports) -> {ok,recon:inet_attrs()}
                                          | {error,term()} when
       AttributeName :: 'recv_cnt' | 'recv_oct' | 'send_cnt' | 'send_oct'
-                     | 'cnt' | 'oct'.
-inet_attrs(Attr, Port) ->
+                     | 'cnt' | 'oct',
+      Ports :: port() | [port()].
+inet_attrs(Attr, Port) when is_port(Port) ->
     Attrs = case Attr of
         cnt -> [recv_cnt, send_cnt];
         oct -> [recv_oct, send_oct];
@@ -113,7 +114,10 @@ inet_attrs(Attr, Port) ->
             {ok, {Port,ValSum,Props}};
         {error, Reason} ->
             {error, Reason}
-    end.
+    end;
+inet_attrs(AttrName, Ports) when is_list(Ports) ->
+    [Attrs || Port <- Ports,
+              {ok, Attrs} <- [inet_attrs(AttrName, Port)]].
 
 
 %% @doc Equivalent of `pid(X,Y,Z)' in the Erlang shell.
